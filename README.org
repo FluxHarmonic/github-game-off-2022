@@ -40,6 +40,19 @@ Once you find them, you must head back to the town square (the starting location
 - The Sound of Stones
 - Call of the Stones
 
+* Things to Implement
+
+- The concept of a screen, maybe the same size as the screen itself, reasonable tile size
+- Transitions between screens
+- Basic platformer movement
+- Sprite animations
+- Collision detection against tile map
+- Picking up items
+- Providing audio cues to find items in the world
+- *Ability to play sounds and music files* (maybe using OpenAL?)
+- Compiling to [[https://emscripten.org/][Emscripten]] for playing in the browser ([[https://emscripten.org/docs/porting/Audio.html?highlight=audio][audio]])
+- Loading OGG files for music and sound effects ([[https://github.com/nothings/stb/blob/master/stb_vorbis.c][stb_vorbis]])
+
 * Tasks
 
 ** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
