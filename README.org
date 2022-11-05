@@ -1,0 +1,40 @@
+#+title: GitHub GameOff 2022
+
+The Jam Website: https://itch.io/jam/game-off-2022
+
+* The Concept
+
+I would like to make a minimal, atmospheric 2D platformer directly inspired by the game [[https://archive.org/details/Knytt/][Knytt]].
+
+The world will be comprised of a grid of screens, each of which having its own character and "area".  There will be occasional background music clips of 10-20 seconds as well as atmospheric noise in some areas.
+
+The goal will be to explore and pick up a series of items you need to win the game.
+
+* Game Mechanics
+
+You can run around around the world freely, climb up walls and jump over obstacles.
+
+You might be able to pick up powerup items that enable you to reach new areas a la Metroid.
+
+There might be a mechanic for helping you find your way to the next item like in Knytt.
+
+* Cliche Ideas
+
+- He left no stone unturned
+- Clear the air
+- As old as time
+- Ear to the ground
+- Built to last
+- Back to square one
+
+The concept:
+
+You are a character who lives in a realm where there has been peace for a long time.  One day, the Purity Stones that protect the realm were stolen and hidden across the land.  Since then, the air has become unclean and it it is not safe to stay.
+
+Your character must venture through the different areas of the realm to find all the missing stones and reassemble them so that the air becomes clear once again.  The stones all make their own special sound, so you need to listen for them to find your way.
+
+Once you find them, you must head back to the town square (the starting location) to reassemble the altar of the Purity Stones!
+
+* Tasks
+
+** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
