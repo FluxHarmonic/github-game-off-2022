@@ -1,0 +1,79 @@
+(define-module (stones screen)
+  (import (mesche math)
+          (mesche array)
+          (substratic renderer)))
+
+(define-record-type screen
+  (fields bg-image                       ; A background image to display
+          bg-color                       ; A background color to display when no
+                                         ; image
+          tiles                          ; The vector containing tile data
+          tile-image                     ; The image to use for rendering tiles
+          ))
+
+;; The actual play screen is 1280x720 (720p)
+;; The tiles are (potentially) 32x32
+;; The map size is 40x22
+
+(define tile-size 32)
+(define map-width (/ 1280 tile-size))
+(define map-height (/ 720 tile-size))
+
+(define sky-color (rgb 74 86 87))
+(define ground-color (rgb 92 56 14))
+
+(define (screen-tile-set! screen x y tile-index)
+  (let ((tiles (screen-tiles screen)))
+    (array-nth-set! tiles (+ x (* y map-width)) tile-index)))
+
+(define (screen-tile-ref screen x y)
+  (array-nth (screen-tiles screen)
+             (+ x (* y map-width))))
+
+(define (fill-screen screen)
+  (let loop ((pos 0)
+             (max (* map-width map-height)))
+    (if (< pos max)
+        (let ((x (% pos map-width))
+              (y (floor (/ pos map-width))))
+          (screen-tile-set! screen
+                            x y
+                            (if (> y 18) 1 0))
+          (loop (+ pos 1)
+                max)))))
+
+(define (create-screen) :export
+  (let ((screen (make-screen :bg-color sky-color
+                             :tiles (make-array (* map-width map-height)))))
+    (fill-screen screen)
+    screen))
+
+(define (render-screen renderer screen window-width window-height) :export
+  ;; Render the background color
+  (renderer-draw-rect renderer
+                      0 0
+                      window-width
+                      window-height
+                      (screen-bg-color screen))
+
+  ;; Render the tiles
+  (let loop ((pos 0)
+             (max (* map-width map-height)))
+    (if (< pos max)
+        (let ((x (% pos map-width))
+              (y (floor (/ pos map-width))))
+
+          (if (equal? (screen-tile-ref screen x y) 1)
+              (begin
+                ;; (display "DRAW AT - X:")
+                ;; (display x)
+                ;; (display " / Y: ")
+                ;; (display y)
+                ;; (display "\n")
+                (renderer-draw-rect renderer
+                                    (* x tile-size)
+                                    (* y tile-size)
+                                    tile-size tile-size
+                                    ground-color)))
+          (loop (+ pos 1)
+                max)))))

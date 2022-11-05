@@ -4,12 +4,15 @@
           (substratic font)
           (substratic input)
           (substratic renderer)
-          (stones assets)))
+          (stones assets)
+          (stones screen)))
 
 (define state 'running)
 
 (define small-font #f)
 (define result-font #f)
+
+(define current-screen (create-screen))
 
 (define (init-game) :export
   ;; Load assets
@@ -41,4 +44,7 @@
                (- y (/ text-height 2))))
 
 (define (render-game renderer window-width window-height) :export
-  #t)
+  (render-screen renderer
+                 current-screen
+                 window-width
+                 window-height))
