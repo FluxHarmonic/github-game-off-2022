@@ -1,4 +1,4 @@
-#+title: GitHub GameOff 2022
+#+title: Call of the Stones - GitHub GameOff 2022
 
 The Jam Website: https://itch.io/jam/game-off-2022
 
@@ -35,6 +35,13 @@ Your character must venture through the different areas of the realm to find all
 
 Once you find them, you must head back to the town square (the starting location) to reassemble the altar of the Purity Stones!
 
+** Name Ideas
+
+- The Sound of Stones
+- Call of the Stones
+
 * Tasks
 
 ** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
+
+** TODO Look into hanging on CI, something with the new line number tracking I think

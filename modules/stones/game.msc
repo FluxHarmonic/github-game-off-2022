@@ -1,0 +1,44 @@
+(define-module (stones game)
+  (import (mesche math)
+          (mesche string)
+          (substratic font)
+          (substratic input)
+          (substratic renderer)
+          (stones assets)))
+
+(define state 'running)
+
+(define small-font #f)
+(define result-font #f)
+
+(define (init-game) :export
+  ;; Load assets
+  (set! small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 75))
+  (set! result-font (load-font 'result-font
+                               "assets/fonts/Thintel.ttf"
+                               150)))
+
+(define (handle-game-input-event input-event) :export
+  #t)
+
+(define (update-game time-delta) :export
+  (if (eqv? state 'quit)
+      ;; If we're in the quit state, exit the loop by returning nil
+      #f
+      (begin
+        ;; Continue running the game loop
+        #t)))
+
+(define (render-text-centered renderer
+                              font
+                              text
+                              x y
+                              text-width text-height)
+  (render-text renderer
+               font
+               text
+               (- x (/ text-width 2))
+               (- y (/ text-height 2))))
+
+(define (render-game renderer window-width window-height) :export
+  #t)
