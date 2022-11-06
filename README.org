@@ -29,7 +29,7 @@ There might be a mechanic for helping you find your way to the next item like in
 
 The concept:
 
-You are a character who lives in a realm where there has been peace for a long time.  One day, the Purity Stones that protect the realm were stolen and hidden across the land.  Since then, the air has become unclean and it it is not safe to stay.
+You are a character who lives in a realm where there has been peace for a long time.  One day, the Puria Stones that protect the realm were stolen and hidden across the land.  Since then, the air has become unclean and it it is not safe to stay.
 
 Your character must venture through the different areas of the realm to find all the missing stones and reassemble them so that the air becomes clear once again.  The stones all make their own special sound, so you need to listen for them to find your way.
 
@@ -57,4 +57,8 @@ Once you find them, you must head back to the town square (the starting location
 
 ** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
 
-** TODO Look into hanging on CI, something with the new line number tracking I think
+** DONE Look into hanging on CI, something with the new line number tracking I think
+CLOSED: [2022-11-06 Sun 12:56]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 12:56]
+:END:
