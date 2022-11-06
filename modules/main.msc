@@ -12,6 +12,8 @@
           (stones game)
           (stones assets)))
 
+(define screen-width 1280)
+(define screen-height 720)
 (define window-width (* 1280 2))
 (define window-height (* 720 2))
 
@@ -21,8 +23,11 @@
 (define input-state (input-init window))
 (define renderer (renderer-create window))
 
+;; Scale everything rendered by 2x
+(renderer-scale-set! renderer 2)
+
 ;; Load fonts
-(define small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 75))
+(define small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 35))
 
 ;; Show the window
 (window-show window)
@@ -62,8 +67,8 @@
         (render-text renderer
                      small-font
                      (string-append "FPS: " (number->string fps 3))
-                     (- window-width 220)
-                     60))))
+                     (- screen-width 105)
+                     25))))
 
 ;; This will run the game functions until the updater returns nil
 (run-engine-loop :renderer renderer

@@ -12,15 +12,15 @@
           ))
 
 ;; The actual play screen is 1280x720 (720p)
-;; The tiles are (potentially) 32x32
-;; The map size is 40x22
+;; The tiles are 32x32
+;; The map size is 40x23 (because the resolution isn't perfectly square)
 
 (define tile-size 32)
-(define map-width (/ 1280 tile-size))
-(define map-height (/ 720 tile-size))
+(define map-width 40)
+(define map-height 23)
 
-(define sky-color (rgb 74 86 87))
-(define ground-color (rgb 92 56 14))
+(define sky-color (rgb 226 235 244))
+(define ground-color (rgb 237 144 37))
 
 (define (screen-tile-set! screen x y tile-index)
   (let ((tiles (screen-tiles screen)))
@@ -38,7 +38,7 @@
               (y (floor (/ pos map-width))))
           (screen-tile-set! screen
                             x y
-                            (if (> y 18) 1 0))
+                            (if (> y 17) 1 0))
           (loop (+ pos 1)
                 max)))))
 
@@ -52,7 +52,7 @@
   ;; Render the background color
   (renderer-draw-rect renderer
                       0 0
-                      window-width
+                      (- window-width 5)
                       window-height
                       (screen-bg-color screen))
 
@@ -62,18 +62,13 @@
     (if (< pos max)
         (let ((x (% pos map-width))
               (y (floor (/ pos map-width))))
-
           (if (equal? (screen-tile-ref screen x y) 1)
               (begin
-                ;; (display "DRAW AT - X:")
-                ;; (display x)
-                ;; (display " / Y: ")
-                ;; (display y)
-                ;; (display "\n")
                 (renderer-draw-rect renderer
                                     (* x tile-size)
                                     (* y tile-size)
-                                    tile-size tile-size
+                                    tile-size
+                                    tile-size
                                     ground-color)))
           (loop (+ pos 1)
                 max)))))

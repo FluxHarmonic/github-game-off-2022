@@ -16,7 +16,7 @@
 
 (define (init-game) :export
   ;; Load assets
-  (set! small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 75))
+  (set! small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 35))
   (set! result-font (load-font 'result-font
                                "assets/fonts/Thintel.ttf"
                                150)))
