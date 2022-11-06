@@ -5,24 +5,101 @@
           (substratic input)
           (substratic renderer)
           (stones assets)
+          (stones player)
           (stones screen)))
+
+;; Game states:
+;; - running
+;; - editing
 
 (define state 'running)
 
 (define small-font #f)
 (define result-font #f)
 
-(define current-screen (create-screen))
+(define mouse-x 0)
+(define mouse-y 0)
+
+(define player #f)
+(define screens '())
+(define current-screen #f)
+(define last-save-point #f)
+
+(define (screen-by-name screens name)
+  (cdr (assq name screens)))
 
 (define (init-game) :export
   ;; Load assets
   (set! small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 35))
   (set! result-font (load-font 'result-font
                                "assets/fonts/Thintel.ttf"
-                               150)))
+                               150))
+
+  ;; TODO: Load the screen index
+  (set! screens (list (cons 'start (create-start-screen))
+                      (cons 'left (create-left-screen))
+                      (cons 'right (create-right-screen))
+                      (cons 'down (create-down-screen))))
+
+  ;; TODO: Load the last save point data
+  (set! last-save-point (cons 'start (cons 19 17)))
+
+  ;; Set the start screen
+  (set! current-screen (screen-by-name screens (car last-save-point)))
+
+  ;; Create and initialize the player
+  (let ((start-pos (cdr last-save-point)))
+    (set! player (create-player))
+    (player-x-set! player (* (car start-pos) tile-size))
+    (player-y-set! player (* (cdr start-pos) tile-size))))
+
+(define (screen->world screen-x screen-y)
+  (cons (floor (/ screen-x tile-size))
+        (floor (/ screen-y tile-size))))
 
 (define (handle-game-input-event input-event) :export
-  #t)
+  ;; Track current mouse position
+  (if (input-event-mouse-move? input-event)
+      (begin
+        (set! mouse-x (/ (input-event-mouse-x input-event) 2))
+        (set! mouse-y (/ (input-event-mouse-y input-event) 2))))
+
+  ;; Did the player click the mouse in edit mode?
+  (if (and (equal? state 'editing)
+           (input-event-mouse-button-down? input-event)
+           (equal? (input-event-mouse-button input-event)
+                   input-mouse-button-left))
+      (let ((map-pos (screen->world mouse-x mouse-y)))
+        (screen-tile-set! current-screen
+                          (car map-pos)
+                          (cdr map-pos)
+                          1)))
+
+  ;; Are we toggling edit mode?
+  (if (and (input-event-key-down? input-event)
+           (equal? (input-event-key-code input-event)
+                   input-key-code-tab))
+      (begin
+        (set! state (if (equal? state 'running)
+                        'editing
+                        'running))
+        (display (string-append "Mode toggled to '"
+                                (symbol->string state)
+                                "'\n"))))
+
+  ;; Handle player input
+  (handle-player-input player input-event))
+
+(define (game-event-handler event)
+  (if (equal? (car event) 'change-screen)
+      (let ((portal (cdr event)))
+        (set! current-screen (screen-by-name screens (portal-dest-screen portal)))
+        ;; TODO: Set player position to portal
+        (display "MOVING TO SCREEN: ")
+        (display (portal-dest-screen portal))
+        (display "\n")
+        ;; (screen-portal-by-name current-screen (portal-dest-portal portal))
+        )))
 
 (define (update-game time-delta) :export
   (if (eqv? state 'quit)
@@ -30,6 +107,7 @@
       #f
       (begin
         ;; Continue running the game loop
+        (update-player player current-screen game-event-handler time-delta)
         #t)))
 
 (define (render-text-centered renderer
@@ -44,7 +122,18 @@
                (- y (/ text-height 2))))
 
 (define (render-game renderer window-width window-height) :export
-  (render-screen renderer
-                 current-screen
-                 window-width
-                 window-height))
+  (render-screen renderer current-screen window-width window-height)
+  (render-player renderer player window-width window-height)
+
+  (render-text renderer
+               small-font
+               (string-append "MX: "
+                              (number->string (floor (/ mouse-x tile-size)))
+                              " / MY: "
+                              (number->string (floor (/ mouse-y tile-size))))
+               10 30)
+
+  (render-text renderer
+               small-font
+               (string-append "STATE: " (symbol->string state))
+               10 50))

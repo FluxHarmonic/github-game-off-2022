@@ -1,0 +1,63 @@
+(define-module (stones input)
+  (import (mesche list)
+          (substratic input)))
+
+(define-record-type controller
+  (fields up down
+          left right
+          jump
+          listen))
+
+(define (create-controller) :export
+  (make-controller :up #f
+                   :down #f
+                   :left #f
+                   :right #f
+                   :jump #f
+                   :listen #f))
+
+(define (up-command controller input-event)
+  (controller-up-set! controller
+                      (input-event-key-down? input-event)))
+
+(define (down-command controller input-event)
+  (controller-down-set! controller
+                        (input-event-key-down? input-event)))
+
+(define (left-command controller input-event)
+  (controller-left-set! controller
+                        (input-event-key-down? input-event)))
+
+(define (right-command controller input-event)
+  (controller-right-set! controller
+                         (input-event-key-down? input-event)))
+
+(define (jump-command controller input-event)
+  (controller-jump-set! controller
+                        (input-event-key-down? input-event)))
+
+(define (listen-command controller input-event)
+  (controller-listen-set! controller
+                          (input-event-key-down? input-event)))
+
+;; Controls:
+;; WSAD for directional
+;; J to jump
+;; K to listen for stones
+
+(define key-mappings
+  (list (cons input-key-code-w up-command)
+        (cons input-key-code-s down-command)
+        (cons input-key-code-a left-command)
+        (cons input-key-code-d right-command)
+        (cons input-key-code-j jump-command)
+        (cons input-key-code-k listen-command)))
+
+(define (handle-controller-input controller input-event) :export
+  (let next-key ((mappings key-mappings))
+    (if (pair? mappings)
+        (begin
+          (if (equal? (car (car mappings))
+                      (input-event-key-code input-event))
+              ((cdr (car mappings)) controller input-event)
+              (next-key (cdr mappings)))))))

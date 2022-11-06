@@ -3,34 +3,64 @@
           (mesche array)
           (substratic renderer)))
 
+(define-record-type portal
+  (fields name
+          x y
+          dest-screen
+          dest-portal))
+
 (define-record-type screen
-  (fields bg-image                       ; A background image to display
-          bg-color                       ; A background color to display when no
-                                         ; image
-          tiles                          ; The vector containing tile data
-          tile-image                     ; The image to use for rendering tiles
-          ))
+  (fields bg-image                      ; A background image to display
+          bg-color                      ; A background color to display when no image
+          tiles                         ; The vector containing tile data
+          tile-image                    ; The image to use for rendering tiles
+          portals                       ; The list of portals in the screen
+          save-point))                  ; The save point in the screen, if any
+
+;; Where does the player start on the screen?
+;; - It depends on whether we are just starting the game
+;;   or if they walked in from a particular entry point
+;; - We need to know what the entry points are
+;; - Have a list of numbered portals per screen
+;; - Each portal has a destination which is a screen plus portal number
+;; - The screen would also have possible save points which would function as a
+;;   starting location either when starting the game or after you die
 
 ;; The actual play screen is 1280x720 (720p)
 ;; The tiles are 32x32
 ;; The map size is 40x23 (because the resolution isn't perfectly square)
 
-(define tile-size 32)
+(define tile-size 32 :export)
 (define map-width 40)
 (define map-height 23)
 
 (define sky-color (rgb 226 235 244))
 (define ground-color (rgb 237 144 37))
 
-(define (screen-tile-set! screen x y tile-index)
+(define (screen-tile-set! screen x y tile-index) :export
   (let ((tiles (screen-tiles screen)))
     (array-nth-set! tiles (+ x (* y map-width)) tile-index)))
 
-(define (screen-tile-ref screen x y)
+(define (screen-tile-ref screen x y) :export
   (array-nth (screen-tiles screen)
              (+ x (* y map-width))))
 
-(define (fill-screen screen)
+(define (screen-portal-at-pos screen x y) :export
+  (let loop ((portals (screen-portals screen)))
+    (if (pair? portals)
+        (if (and (equal? (portal-x (car portals)) x)
+                 (equal? (portal-y (car portals)) y))
+            (car portals)
+            (loop (cdr portals)))
+        #f)))
+
+(define (screen-tile-ground? screen x y) :export
+  (equal? (screen-tile-ref screen x y) 1))
+
+(define (screen-tile-wall? screen x y) :export
+  (equal? (screen-tile-ref screen x y) 1))
+
+(define (fill-screen screen ground-y)
   (let loop ((pos 0)
              (max (* map-width map-height)))
     (if (< pos max)
@@ -38,14 +68,56 @@
               (y (floor (/ pos map-width))))
           (screen-tile-set! screen
                             x y
-                            (if (> y 17) 1 0))
+                            (if (>= y ground-y) 1 0))
           (loop (+ pos 1)
                 max)))))
 
 (define (create-screen) :export
-  (let ((screen (make-screen :bg-color sky-color
-                             :tiles (make-array (* map-width map-height)))))
-    (fill-screen screen)
+  (make-screen :bg-color sky-color
+               :tiles (make-array (* map-width map-height))))
+
+(define (screen-portal-add! screen name x y dest-screen dest-portal) :export
+  (screen-portals-set! screen
+                       (cons (make-portal :name name
+                                          :x x
+                                          :y y
+                                          :dest-screen dest-screen
+                                          :dest-portal dest-portal)
+                             (screen-portals screen))))
+
+(define (create-start-screen) :export
+  (let ((screen (create-screen)))
+    (fill-screen screen 18)
+    (screen-tile-set! screen 12 17 1)
+    (screen-tile-set! screen 13 17 1)
+    (screen-tile-set! screen 14 17 1)
+    (screen-tile-set! screen 15 17 1)
+    (screen-tile-set! screen 16 17 1)
+    (screen-tile-set! screen 13 16 1)
+    (screen-tile-set! screen 14 16 1)
+    (screen-tile-set! screen 15 16 1)
+    (screen-tile-set! screen 14 15 1)
+    (screen-portal-add! screen 'left-portal 0 17 'left 'right-portal)
+    (screen-portal-add! screen 'right-portal 39 17 'right 'left-portal)
+    screen))
+
+(define (create-left-screen) :export
+  (let ((screen (create-screen)))
+    (fill-screen screen 12)
+    (screen-portal-add! screen
+                        'right-portal
+                        39 11
+                        'start 'left-portal)
+    screen))
+
+(define (create-right-screen) :export
+  (let ((screen (create-screen)))
+    (fill-screen screen 20)
+    screen))
+
+(define (create-down-screen) :export
+  (let ((screen (create-screen)))
+    (fill-screen screen 10)
     screen))
 
 (define (render-screen renderer screen window-width window-height) :export

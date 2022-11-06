@@ -1,0 +1,125 @@
+(define-module (stones player)
+  (import (mesche math)
+          (substratic input)
+          (substratic renderer)
+          (stones input)
+          (stones screen)))
+
+;; States
+;; - Standing
+;; - Running
+;; - Jumping
+
+(define gravity-accel-y 9)
+(define damping 3)
+
+(define player-size 32)
+(define player-color (rgb 198 40 242))
+(define player-jump-vel-y -4)
+(define player-move-accel-x 7)
+(define player-max-vel-x 25)
+(define player-max-vel-y 7)
+(define player-controller (create-controller))
+
+(define-record-type player
+  (fields x
+          y
+          vel-x
+          vel-y
+          accel-x
+          accel-y
+          state))
+
+(define (create-player) :export
+  (make-player :x 100
+               :y 500
+               :vel-x 0
+               :vel-y 0
+               :accel-x 0
+               :accel-y 0
+               :state 'standing))
+
+(define (handle-player-input player input-event) :export
+  (handle-controller-input player-controller input-event))
+
+(define (read-controller player controller time-delta)
+  ;; Look at controller state to change velocity
+  (let ((neg-move (* -1 player-move-accel-x)))
+    ;; (if (controller-up controller)
+    ;;     (player-vel-y-set! player neg-move)
+    ;;     (if (controller-down controller)
+    ;;         (player-vel-y-set! player player-move-speed)
+    ;;         (player-vel-y-set! player 0)))
+    (if (controller-left controller)
+        (player-accel-x-set! player neg-move)
+        (if (controller-right controller)
+            (player-accel-x-set! player player-move-accel-x)
+            (player-accel-x-set! player 0)))
+    (if (controller-jump controller)
+        ;; TODO: Add jump impulse
+        (if (not (equal? (player-state player) 'jumping))
+            (begin
+              (player-vel-y-set! player player-jump-vel-y)
+              (player-state-set! player 'jumping))))))
+
+(define (update-player player screen game-event-handler time-delta) :export
+  ;; Read the player input and decide how to handle it
+  (read-controller player player-controller time-delta)
+
+  ;; Update player velocity from acceleration
+  (let ((vel-x (min (+ (player-vel-x player)
+                       (* (player-accel-x player) time-delta))
+                    player-max-vel-x)))
+    (player-vel-x-set! player (/ vel-x (+ 1 (* damping time-delta)))))
+  (player-x-set! player (+ (player-x player)
+                           (player-vel-x player)))
+
+  ;; Update player position based on velocity
+  (if (equal? (player-state player) 'jumping)
+      (begin
+        (player-vel-y-set! player (min (+ (player-vel-y player)
+                                          (* gravity-accel-y time-delta))
+                                       player-max-vel-y))
+        (player-y-set! player (+ (player-y player)
+                                 (player-vel-y player)))))
+
+  (let ((map-x (floor (/ (player-x player) tile-size)))
+        (map-y (floor (/ (player-y player) tile-size)))
+        (vel-x (player-vel-x player)))
+    ;; Check for collision against a portal
+    (let ((portal (or (and (< vel-x 0)
+                           (screen-portal-at-pos screen map-x map-y))
+                      (and (> vel-x 0)
+                           (screen-portal-at-pos screen (+ map-x 1) map-y)))))
+      (if portal (game-event-handler (cons 'change-screen portal))))
+
+    ;; Check for collision against a wall tile
+    (if (or (and (< vel-x 0)
+                 (screen-tile-wall? screen map-x map-y))
+            (and (> vel-x 0)
+                 (screen-tile-wall? screen (+ map-x 1) map-y)))
+        ;; Stop movement
+        (begin
+          (player-x-set! player (* (+ map-x (if (< vel-x 0) 1 0))
+                                   tile-size))
+          (player-accel-x-set! player 0)
+          (player-vel-x-set! player 0)))
+
+    ;; Check for collision against a ground tile
+    (if (or (screen-tile-ground? screen map-x (+ map-y 1))
+            (screen-tile-ground? screen (+ map-x 1) (+ map-y 1)))
+        (begin
+          ;; Stop the player from moving
+          (player-y-set! player (* map-y tile-size))
+          (player-vel-y-set! player 0)
+          (player-state-set! player 'standing))
+        (begin
+          (player-state-set! player 'jumping)))))
+
+(define (render-player renderer player window-width window-height) :export
+  (renderer-draw-rect renderer
+                      (player-x player)
+                      (player-y player)
+                      player-size
+                      player-size
+                      player-color))

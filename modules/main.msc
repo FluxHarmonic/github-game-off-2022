@@ -35,13 +35,13 @@
 ;; Get an fps counter
 (define current-fps (make-fps-counter))
 
+;; Initialize the game
+(init-game)
+
 ;; These will track the current game logic and render functions
 (define current-input-handler handle-game-input-event)
 (define current-updater update-game)
 (define current-renderer render-game)
-
-;; Initialize the game
-(init-game)
 
 (define (handle-input-events)
   (let next-event ((input-event (input-event-take input-state)))
