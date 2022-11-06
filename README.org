@@ -55,10 +55,54 @@ Once you find them, you must head back to the town square (the starting location
 
 * Tasks
 
-** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
+** DONE Get basic player movement working (running, jumping)
+CLOSED: [2022-11-06 Sun 15:35]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 15:35]
+:END:
+
+** DONE Write very basic ground collision detection
+CLOSED: [2022-11-06 Sun 15:36]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 15:36]
+:END:
+
+
+** DONE Write the beginnings of an in-game map editor
+CLOSED: [2022-11-06 Sun 16:22]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 16:22]
+:END:
+
+
+** DONE Make the initial screen a little more interesting
+CLOSED: [2022-11-06 Sun 17:06]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 17:06]
+:END:
+
+
+** DONE Basic transitions between screens
+CLOSED: [2022-11-06 Sun 17:06]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-06 Sun 17:06]
+:END:
 
 ** DONE Look into hanging on CI, something with the new line number tracking I think
 CLOSED: [2022-11-06 Sun 12:56]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2022-11-06 Sun 12:56]
 :END:
+
+
+* Off-Stream Tasks
+
+** TODO Improve collision detection, especially upper movement checking while jumping
+
+** TODO Reading and writing Mesche data from files
+
+** TODO Better error handling
+
+** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
+
+** TODO =equal?= does not complain when not given second param, does weird stuff
