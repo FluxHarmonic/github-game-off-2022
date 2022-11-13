@@ -4,6 +4,7 @@
           (substratic font)
           (substratic input)
           (substratic renderer)
+          (stones ui)
           (stones assets)
           (stones player)
           (stones screen)))
@@ -24,6 +25,8 @@
 (define screens '())
 (define current-screen #f)
 (define last-save-point #f)
+(define root-element #f)
+(define ui-context #f)
 
 (define screen-scale 1)
 
@@ -31,6 +34,11 @@
   (cdr (assq name screens)))
 
 (define (init-game screen-width screen-height scale) :export
+  ;; Hold on to the screen size and scale
+  (set! ui-context (make-ui-context :pos-x 0
+                                    :pos-y 0
+                                    :max-x screen-width
+                                    :max-y screen-height))
   (set! screen-scale scale)
 
   ;; Load assets
@@ -55,6 +63,14 @@
   ;; Set the start screen
   (set! current-screen (screen-by-name screens (car last-save-point)))
 
+  ;; Create the UI
+  (set! root-element (create-root-element
+                      (create-button "test-button"
+                                     "Click me!"
+                                     300 300 80
+                                     (lambda (ui-element)
+                                       (display "I was clicked!\n")))))
+
   ;; Create and initialize the player
   (let ((start-pos (cdr last-save-point)))
     (set! player (create-player))
@@ -65,6 +81,22 @@
   (cons (floor (/ screen-x tile-size))
         (floor (/ screen-y tile-size))))
 
+(define (translate-input-event input-event mouse-x mouse-y)
+  (if (input-event-mouse-button-down? input-event)
+      (make-ui-mouse-event :x mouse-x
+                           :y mouse-y
+                           :kind 'down
+                           :button (input-event-mouse-button input-event))
+      (if (input-event-mouse-button-up? input-event)
+          (make-ui-mouse-event :x mouse-x
+                               :y mouse-y
+                               :kind 'up
+                               :button (input-event-mouse-button input-event))
+          (if (input-event-mouse-move? input-event)
+              (make-ui-mouse-event :x mouse-x
+                                   :y mouse-y
+                                   :kind 'move)))))
+
 (define (handle-game-input-event input-event) :export
   ;; Track current mouse position
   (if (input-event-mouse-move? input-event)
@@ -73,15 +105,15 @@
         (set! mouse-y (/ (input-event-mouse-y input-event) screen-scale))))
 
   ;; Did the player click the mouse in edit mode?
-  (if (and (equal? state 'editing)
-           (input-event-mouse-button-down? input-event)
-           (equal? (input-event-mouse-button input-event)
-                   input-mouse-button-left))
-      (let ((map-pos (screen->world mouse-x mouse-y)))
-        (screen-tile-set! current-screen
-                          (car map-pos)
-                          (cdr map-pos)
-                          1)))
+  ;; (if (and (equal? state 'editing)
+  ;;          (input-event-mouse-button-down? input-event)
+  ;;          (equal? (input-event-mouse-button input-event)
+  ;;                  input-mouse-button-left))
+  ;;     (let ((map-pos (screen->world mouse-x mouse-y)))
+  ;;       (screen-tile-set! current-screen
+  ;;                         (car map-pos)
+  ;;                         (cdr map-pos)
+  ;;                         1)))
 
   ;; Are we toggling edit mode?
   (if (and (input-event-key-down? input-event)
@@ -95,8 +127,25 @@
                                 (symbol->string state)
                                 "'\n"))))
 
-  ;; Handle player input
-  (handle-player-input player input-event))
+  (if (equal? state 'editing)
+      (if (and (input-event-key-down? input-event)
+               (input-event-modifier-ctrl? input-event)
+               (equal? (input-event-key-code input-event)
+                       input-key-code-s))
+          (begin
+            ;; (display "About to save...\n")
+            (save-screen current-screen (string-append "assets/screens/"
+                                                       (screen-name current-screen)
+                                                       ".stm"))
+            (display "Saved the screen!\n"))
+
+          ;; Translate the input event to screen space
+          (handle-element ui-context
+                          root-element
+                          (translate-input-event input-event mouse-x mouse-y)))
+
+      ;; If not editing, handle player input
+      (handle-player-input player input-event)))
 
 (define (game-event-handler event)
   (if (equal? (car event) 'change-screen)
@@ -115,6 +164,7 @@
       #f
       (begin
         ;; Continue running the game loop
+        ;; (update-element ui-context root-element time-delta)
         (update-player player current-screen game-event-handler time-delta)
         #t)))
 
@@ -144,4 +194,7 @@
   (render-text renderer
                small-font
                (string-append "STATE: " (symbol->string state))
-               10 50))
+               10 50)
+
+  ;; Render the UI
+  (render-element ui-context root-element renderer))

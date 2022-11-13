@@ -1,0 +1,161 @@
+(define-module (stones ui)
+  (import (mesche math)
+          (stones assets)
+          (substratic font)
+          (substratic input)
+          (substratic renderer)))
+
+(define-record-type ui-element
+  (fields name
+          renderer
+          updater
+          handler
+          state
+          pos-x
+          pos-y
+          size-x
+          size-y
+          children))
+
+(define-record-type ui-context
+  (fields pos-x
+          pos-y
+          max-x
+          max-y))
+
+(define ui-font #f)
+
+(define null-renderer (lambda (ui-context ui-element renderer) #f) :export)
+(define null-updater (lambda (ui-context ui-element time-delta) #f) :export)
+(define null-handler (lambda (ui-context ui-element event) #f) :export)
+
+(define (render-children ui-context ui-element renderer)
+  (let loop ((children (ui-element-children ui-element)))
+    (if (pair? children)
+        (loop (begin
+                (render-element ui-context
+                                (car children)
+                                renderer)
+                (cdr children))))))
+
+;; TODO: Should this function have logic for removing a child from the list?
+(define (update-children ui-context ui-element time-delta)
+  (let loop ((children (ui-element-children ui-element)))
+    (if (pair? children)
+        (loop (begin
+                (update-element ui-context
+                                (car children)
+                                time-delta)
+                (cdr children))))))
+
+(define (translate-mouse-event event ui-element)
+  (break)
+  (if (ui-mouse-event? event)
+      event
+      ;; (make-ui-mouse-event :x (- (ui-mouse-event-x event)
+      ;;                            (ui-element-pos-x ui-element))
+      ;;                      :y (- (ui-mouse-event-y event)
+      ;;                            (ui-element-pos-y ui-element))
+      ;;                      :kind (ui-mouse-event-kind event)
+      ;;                      :button (ui-mouse-event-button event))
+      event))
+
+(define (handle-children ui-context ui-element event)
+  (let loop ((children (or (ui-element-children ui-element) '())))
+    ;; (break)
+    (if (pair? children)
+        (or (handle-element ui-context
+                            (car children)
+                            (translate-mouse-event event (car children))
+                            ;; event
+                            )
+            (loop (cdr children))))))
+
+(define (render-element ui-context ui-element renderer) :export
+  ((ui-element-renderer ui-element) ui-context ui-element renderer))
+
+(define (update-element ui-context ui-element time-delta) :export
+  ((ui-element-updater ui-element) ui-context ui-element time-delta))
+
+(define (handle-element ui-context ui-element event) :export
+  ((ui-element-handler ui-element) ui-context ui-element event))
+
+(define (add-child-element! ui-element child-element)
+  (display "Adding child to element ")
+  (display (ui-element-name ui-element))
+  (display "\n")
+  (ui-element-children-set! ui-element
+                            (cons child-element
+                                  (ui-element-children ui-element))))
+
+(define-record-type ui-button
+  (fields label
+          clicked
+          color
+          handler))
+
+(define (render-button ui-context ui-element renderer)
+  (let ((x (+ (ui-context-pos-x ui-context)
+              (ui-element-pos-x ui-element)))
+        (y (+ (ui-context-pos-y ui-context)
+              (ui-element-pos-y ui-element)))
+        (button (ui-element-state ui-element)))
+    ;; Render the button rectangle
+    (renderer-draw-rect renderer
+                        x y
+                        (ui-element-size-x ui-element)
+                        (ui-element-size-y ui-element)
+                        (ui-button-color button))
+
+    ;; Render the button label
+    (render-text renderer
+                 ui-font
+                 (ui-button-label button)
+                 (+ x 4)
+                 (+ (+ y 4)
+                    (font-height ui-font)))))
+
+(define-record-type ui-mouse-event
+  (fields x y kind button))
+
+;; (define (project-mouse-event))
+
+(define (handle-button ui-context ui-element event)
+  ;; The input event has a position with respect to the window size, not the screen size
+  (if (and (ui-mouse-event? event)
+           (equal? (ui-mouse-event-kind event)
+                   'down))
+      (begin
+        (display "Mouse event!\nX: ")
+        (display (ui-mouse-event-x event))
+        (display " / Y: ")
+        (display (ui-mouse-event-y event))
+        (display "\n"))))
+
+(define (create-button name label pos-x pos-y width handler) :export
+  (make-ui-element :name name
+                   :pos-x pos-x
+                   :pos-y pos-y
+                   :size-x width
+                   :size-y 25
+                   :state (make-ui-button :label label
+                                          :color (rgb 255 0 0))
+                   :renderer render-button
+                   :updater null-updater
+                   :handler handle-button))
+
+(define (handle-root-event ui-context ui-element event)
+  ;; Is it a mouse move event?  If so, store the mouse position
+  (if (ui-mouse-event? event)
+      (let ((x (ui-mouse-event-x event))
+            (y (ui-mouse-event-y event)))
+        (ui-element-state-set! ui-element (cons x y))))
+  (handle-children ui-context ui-element event))
+
+(define (create-root-element . children) :export
+  (set! ui-font (load-font 'ui-font "assets/fonts/Thintel.ttf" 35))
+  (make-ui-element :name "root"
+                   :renderer render-children
+                   :updater update-children
+                   :handler handle-children
+                   :children children))
