@@ -1,21 +1,32 @@
 (define-module (stones screen)
-  (import (mesche math)
+  (import (mesche io)
+          (mesche math)
           (mesche array)
+          (mesche string)
           (substratic renderer)))
+
+(define portal-direction-left  0 :export)
+(define portal-direction-right 1 :export)
+(define portal-direction-up    2 :export)
+(define portal-direction-down  3 :export)
 
 (define-record-type portal
   (fields name
           x y
+          direction
           dest-screen
           dest-portal))
 
 (define-record-type screen
-  (fields bg-image                      ; A background image to display
-          bg-color                      ; A background color to display when no image
-          tiles                         ; The vector containing tile data
-          tile-image                    ; The image to use for rendering tiles
-          portals                       ; The list of portals in the screen
-          save-point))                  ; The save point in the screen, if any
+  (fields name                          ; The name of the screen
+          width                         ; The width of the screen
+          height                        ; The height of the screen
+          bg-image                 ; A background image to displ
+          bg-color                 ; A background color to display when no image
+          tiles                    ; The vector containing tile data
+          tile-image               ; The image to use for rendering tiles
+          portals                  ; The list of portals in the screen
+          save-point))             ; The save point in the screen, if any
 
 ;; Where does the player start on the screen?
 ;; - It depends on whether we are just starting the game
@@ -34,7 +45,7 @@
 (define map-width 40)
 (define map-height 23)
 
-(define sky-color (rgb 226 235 244))
+(define sky-color (rgb 171 201 231))
 (define ground-color (rgb 237 144 37))
 
 (define (screen-tile-set! screen x y tile-index) :export
@@ -42,8 +53,13 @@
     (array-nth-set! tiles (+ x (* y map-width)) tile-index)))
 
 (define (screen-tile-ref screen x y) :export
-  (array-nth (screen-tiles screen)
-             (+ x (* y map-width))))
+  (if (and (>= x 0)
+           (< x map-width)
+           (>= y 0)
+           (< y map-height))
+      (array-nth (screen-tiles screen)
+                 (+ x (* y map-width)))
+      #f))
 
 (define (screen-portal-at-pos screen x y) :export
   (let loop ((portals (screen-portals screen)))
@@ -72,21 +88,24 @@
           (loop (+ pos 1)
                 max)))))
 
-(define (create-screen) :export
-  (make-screen :bg-color sky-color
-               :tiles (make-array (* map-width map-height))))
+(define (create-screen name) :export
+  (make-screen :name name
+               :bg-color sky-color
+               :tiles (make-array (* map-width map-height))
+               :portals '()))
 
-(define (screen-portal-add! screen name x y dest-screen dest-portal) :export
+(define (screen-portal-add! screen name x y direction dest-screen dest-portal) :export
   (screen-portals-set! screen
                        (cons (make-portal :name name
                                           :x x
                                           :y y
+                                          :direction direction
                                           :dest-screen dest-screen
                                           :dest-portal dest-portal)
                              (screen-portals screen))))
 
 (define (create-start-screen) :export
-  (let ((screen (create-screen)))
+  (let ((screen (create-screen "start")))
     (fill-screen screen 18)
     (screen-tile-set! screen 12 17 1)
     (screen-tile-set! screen 13 17 1)
@@ -97,34 +116,145 @@
     (screen-tile-set! screen 14 16 1)
     (screen-tile-set! screen 15 16 1)
     (screen-tile-set! screen 14 15 1)
-    (screen-portal-add! screen 'left-portal 0 17 'left 'right-portal)
-    (screen-portal-add! screen 'right-portal 39 17 'right 'left-portal)
+    (screen-portal-add! screen
+                        "left-portal"
+                        0 17
+                        portal-direction-left
+                        "left"
+                        "right-portal")
+    (screen-portal-add! screen
+                        "right-portal"
+                        39 17
+                        portal-direction-right
+                        "right"
+                        "left-portal")
     screen))
 
 (define (create-left-screen) :export
-  (let ((screen (create-screen)))
+  (let ((screen (create-screen "left")))
     (fill-screen screen 12)
     (screen-portal-add! screen
-                        'right-portal
+                        "right-portal"
                         39 11
-                        'start 'left-portal)
+                        portal-direction-right
+                        "start" "left-portal")
     screen))
 
 (define (create-right-screen) :export
-  (let ((screen (create-screen)))
+  (let ((screen (create-screen "right")))
     (fill-screen screen 20)
     screen))
 
 (define (create-down-screen) :export
-  (let ((screen (create-screen)))
+  (let ((screen (create-screen "down")))
     (fill-screen screen 10)
+    screen))
+
+(define (write-portals portals port)
+  (let loop ((count 0)
+             (portals portals)
+             (out-string ""))
+    (if (pair? portals)
+        (loop (+ count 1)
+              (cdr portals)
+              (string-append out-string
+                             (portal-name (car portals)) "\n"
+                             (number->string (portal-x (car portals))) "\n"
+                             (number->string (portal-y (car portals))) "\n"
+                             (number->string (portal-direction (car portals))) "\n"
+                             (portal-dest-screen (car portals)) "\n"
+                             (portal-dest-portal (car portals)) "\n"))
+        (begin
+          (write-string (string-append (number->string count) "\n") port)
+          (if (> count 0)
+              (write-string out-string port))))))
+
+(define (read-portals port)
+  (let loop ((count (string->number (read-line port)))
+             (portals '()))
+    (if (> count 0)
+        (loop (- count 1)
+              (cons (make-portal :name (read-line port)
+                                 :x (string->number (read-line port))
+                                 :y (string->number (read-line port))
+                                 :direction (string->number (read-line port))
+                                 :dest-screen (read-line port)
+                                 :dest-portal (read-line port))
+                    portals))
+        (reverse portals))))
+
+(define (save-screen screen file-path) :export
+  (display "Writing screen file: ")
+  (display file-path)
+  (display "\n")
+  (let ((port (open-output-file file-path)))
+    (write-string "stcm\n" port)
+    (write-string (string-append (screen-name screen) "\n") port)
+    (write-string (string-append (number->string map-width) "\n") port)
+    (write-string (string-append (number->string map-height) "\n") port)
+    (write-string (string-append (number->string (color-r (screen-bg-color screen))) " "
+                                 (number->string (color-g (screen-bg-color screen))) " "
+                                 (number->string (color-b (screen-bg-color screen))) "\n")
+                  port)
+    (write-string (string-append (string-join (map (lambda (tile)
+                                                     (number->string tile))
+                                                   (array->list (screen-tiles screen))) " ")
+                                 "\n")
+                  port)
+
+    ;; Write out portals list
+    (write-portals (screen-portals screen) port)
+    (close-output-port port)))
+
+(define (read-color port)
+  (let ((channels (string-split (read-line port)
+                                (lambda (c)
+                                  (string=? c " ")))))
+    (rgb (string->number (car channels))
+         (string->number (cadr channels))
+         (string->number (cadr (cdr channels))))))
+
+(define (read-tiles port)
+  (let ((tiles (string-split (read-line port)
+                             (lambda (c)
+                               (string=? c " ")))))
+    (let loop ((tiles tiles)
+               (count 0)
+               (array (make-array)))
+      (if (pair? tiles)
+          (begin
+            (array-push array (string->number (car tiles)))
+            (loop (cdr tiles)
+                  (+ count 1)
+                  array))
+          array))))
+
+(define (load-screen file-path) :export
+  (display "Reading screen file: ")
+  (display file-path)
+  (display "\n")
+  (let ((port (open-input-file file-path))
+        (screen #f))
+    (if (not (equal? (read-line port)
+                     "stcm"))
+        (display "This is NOT a map file!\n")
+        (begin
+          (display "This is a map file!\n")
+          (set! screen
+                (make-screen :name (read-line port)
+                             :width (string->number (read-line port))
+                             :height (string->number (read-line port))
+                             :bg-color (read-color port)
+                             :tiles (read-tiles port)
+                             :portals (read-portals port)))))
+    (close-input-port port)
     screen))
 
 (define (render-screen renderer screen window-width window-height) :export
   ;; Render the background color
   (renderer-draw-rect renderer
                       0 0
-                      (- window-width 5)
+                      window-width
                       window-height
                       (screen-bg-color screen))
 
@@ -134,13 +264,12 @@
     (if (< pos max)
         (let ((x (% pos map-width))
               (y (floor (/ pos map-width))))
-          (if (equal? (screen-tile-ref screen x y) 1)
-              (begin
-                (renderer-draw-rect renderer
-                                    (* x tile-size)
-                                    (* y tile-size)
-                                    tile-size
-                                    tile-size
-                                    ground-color)))
+         (if (equal? (screen-tile-ref screen x y) 1)
+              (renderer-draw-rect renderer
+                                  (* x tile-size)
+                                  (* y tile-size)
+                                  tile-size
+                                  tile-size
+                                  ground-color))
           (loop (+ pos 1)
                 max)))))

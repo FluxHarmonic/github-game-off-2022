@@ -37,7 +37,9 @@
 (define current-fps (make-fps-counter))
 
 ;; Initialize the game
-(init-game)
+(init-game screen-width
+           screen-height
+           screen-scale)
 
 ;; These will track the current game logic and render functions
 (define current-input-handler handle-game-input-event)

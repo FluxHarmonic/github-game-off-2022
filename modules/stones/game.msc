@@ -25,24 +25,32 @@
 (define current-screen #f)
 (define last-save-point #f)
 
+(define screen-scale 1)
+
 (define (screen-by-name screens name)
   (cdr (assq name screens)))
 
-(define (init-game) :export
+(define (init-game screen-width screen-height scale) :export
+  (set! screen-scale scale)
+
   ;; Load assets
   (set! small-font (load-font 'small-font "assets/fonts/Thintel.ttf" 35))
   (set! result-font (load-font 'result-font
                                "assets/fonts/Thintel.ttf"
                                150))
 
-  ;; TODO: Load the screen index
-  (set! screens (list (cons 'start (create-start-screen))
-                      (cons 'left (create-left-screen))
-                      (cons 'right (create-right-screen))
-                      (cons 'down (create-down-screen))))
+  (let ((start #f))
+    (save-screen (create-start-screen) "assets/screens/start.stm")
+    (set! start (load-screen "assets/screens/start.stm"))
+
+    ;; TODO: Load the screen index
+    (set! screens (list (cons "start" start)
+                        (cons "left" (create-left-screen))
+                        (cons "right" (create-right-screen))
+                        (cons "down" (create-down-screen)))))
 
   ;; TODO: Load the last save point data
-  (set! last-save-point (cons 'start (cons 19 17)))
+  (set! last-save-point (cons "start" (cons 19 17)))
 
   ;; Set the start screen
   (set! current-screen (screen-by-name screens (car last-save-point)))
@@ -61,8 +69,8 @@
   ;; Track current mouse position
   (if (input-event-mouse-move? input-event)
       (begin
-        (set! mouse-x (/ (input-event-mouse-x input-event) 2))
-        (set! mouse-y (/ (input-event-mouse-y input-event) 2))))
+        (set! mouse-x (/ (input-event-mouse-x input-event) screen-scale))
+        (set! mouse-y (/ (input-event-mouse-y input-event) screen-scale))))
 
   ;; Did the player click the mouse in edit mode?
   (if (and (equal? state 'editing)
