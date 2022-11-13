@@ -33,7 +33,7 @@ You are a character who lives in a realm where there has been peace for a long t
 
 Your character must venture through the different areas of the realm to find all the missing stones and reassemble them so that the air becomes clear once again.  The stones all make their own special sound, so you need to listen for them to find your way.
 
-Once you find them, you must head back to the town square (the starting location) to reassemble the altar of the Purity Stones!
+Once you find them, you must head back to the town square (the starting location) to reassemble the altar of the Puria Stones!
 
 ** Name Ideas
 
@@ -67,20 +67,17 @@ CLOSED: [2022-11-06 Sun 15:36]
 - State "DONE"       from "TODO"       [2022-11-06 Sun 15:36]
 :END:
 
-
 ** DONE Write the beginnings of an in-game map editor
 CLOSED: [2022-11-06 Sun 16:22]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2022-11-06 Sun 16:22]
 :END:
 
-
 ** DONE Make the initial screen a little more interesting
 CLOSED: [2022-11-06 Sun 17:06]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2022-11-06 Sun 17:06]
 :END:
-
 
 ** DONE Basic transitions between screens
 CLOSED: [2022-11-06 Sun 17:06]
@@ -94,15 +91,45 @@ CLOSED: [2022-11-06 Sun 12:56]
 - State "DONE"       from "TODO"       [2022-11-06 Sun 12:56]
 :END:
 
-
+** DONE Implement saving and loading of game map data
+CLOSED: [2022-11-13 Sun 13:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-13 Sun 13:23]
+:END:
+** DONE Implement keyboard bindings for editing commands (like C-s for save, etc)
+CLOSED: [2022-11-13 Sun 13:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-13 Sun 13:23]
+:END:
+** TODO Implement some kind of basic UI for entering text prompts (file saving) and selecting items
+** TODO The ability to create new screens
+** TODO The ability to create and edit portals between screens
+*** TODO Enable the UI to select portals either by clicking or key binding
+** TODO The ability to change map tiles to draw
+** TODO Fix the behavior of navigating between screens
 * Off-Stream Tasks
 
-** TODO Improve collision detection, especially upper movement checking while jumping
-
 ** TODO Reading and writing Mesche data from files
+** TODO Improve collision detection, especially upper movement checking while jumping
 
 ** TODO Better error handling
 
 ** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
 
 ** TODO =equal?= does not complain when not given second param, does weird stuff
+** TODO Chunk file name string is being freed before an error can be printed
+
+* How UI Should Work
+
+- The UI library will basically create a tree of UI elements
+- The root element covers the whole screen but doesn't render anything
+- Any real UI elements are children of that root element
+- Any UI element can have its own children
+- Game inputs events are sent to the root element
+- If the root element can't handle a particular event, it sends the event to each of its children until one of them can handle it
+
+What we need:
+
+- Text prompts entering or editing the name of screens or portals
+- Possibly buttons that have actions
+- Maybe some kind of selector element for displaying tiles to select, but at the very least something that can display the currently selected tile image/color
