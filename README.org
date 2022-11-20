@@ -18,7 +18,9 @@ You might be able to pick up powerup items that enable you to reach new areas a 
 
 There might be a mechanic for helping you find your way to the next item like in Knytt.
 
-* Cliche Ideas
+* Game Design
+
+*Cliche Ideas*
 
 - He left no stone unturned
 - Clear the air
@@ -39,6 +41,108 @@ Once you find them, you must head back to the town square (the starting location
 
 - The Sound of Stones
 - Call of the Stones
+
+** World Design
+
+Let's imagine that there are 4 stones to pick up.  Each stone should exist in its own ideally unique area, so that means 4 zones.  There would also be the starting zone that is the nexus to all the other zones.
+
+Number of screens needed: 15 + 16 + 12 + 15 = 58
+
+*** Peaceful Zone
+
+- The starting point of the game is here
+- Green, vegetation
+- Open expanses, easy to traverse, light platforming
+- 5x3: You start in the center of the 3-wide and the adjacent screens lead you to the stone zones
+
+Starting screen of the game is at 4x1
+
+*** Cave Zone
+
+- A dark cave
+- Larger zone (4x4)
+- More like a maze than other areas
+
+*** Lava Zone
+
+- Cave connects to underground magma system
+- Long and flat (maybe like 6x2)
+- Lots of platforming, jumping over obstacles
+
+*** Tech Zone
+
+- Buttons and doors that have to be pressed to proceed
+- 3x5
+
+** Screen Naming Convention
+
+Since we know that each area will have a predetermine screen arrangement, we can name the screen based on their position in their own zone, for example:
+
+=peace-1-1.stm=
+=dark-3-2.stm=
+
+** Editing Maps
+
+The map editor will be very simple.  Hit TAB to enter edit mode and then click anywhere to place a tile.
+
+The number row keys will let you change which tile to use:
+
+- 0: Empty tile
+- 1: Block tile
+- 2: top left corner
+- 3: top surface
+- 4: top right corner
+- 5: left wall
+- 6: right wall
+- 7: bottom left corner
+- 8: bottom surface
+- 9: bottom right corner
+
+** Placing the Stones
+
+- Each zone will have a stone you need to collect to bring back to the starting screen.
+- Each stone will be placed a specific location, it won't be randomly selected (for now)
+- The game engine knows the location of all stones regardless of which map you're on
+- If you press the listen button (K) then a sound should play to direct you toward the nearest stone
+
+Locations:
+- peace-5-1
+- cave-1-1
+- tech-2-3
+- lava-3-1
+
+** Tile Graphic Design
+
+Tiles we need at first:
+
+- 1: Internal wall/ground tile
+- 2: Top left corner
+- 3: Top surface for walking
+- 4: Top right corner
+- 5: Left wall: the wall is facing the player from the left
+- 6: Right wall: the wall is facing the player from the right
+- 7: Bottom left corner
+- 8: Bottom surface: basically the ceiling
+- 9: Bottom right corner
+
+Tile size is 64x64
+Max tile amount: 100, 10x10 in tile graphic
+Tile graphic is 640x640
+
+** How Editor UI Should Work
+
+- The UI library will basically create a tree of UI elements
+- The root element covers the whole screen but doesn't render anything
+- Any real UI elements are children of that root element
+- Any UI element can have its own children
+- Game inputs events are sent to the root element
+- If the root element can't handle a particular event, it sends the event to each of its children until one of them can handle it
+
+What we need:
+
+- Text prompts entering or editing the name of screens or portals
+- Possibly buttons that have actions
+- Maybe some kind of selector element for displaying tiles to select, but at the very least something that can display the currently selected tile image/color
 
 * Things to Implement
 
@@ -101,35 +205,60 @@ CLOSED: [2022-11-13 Sun 13:23]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2022-11-13 Sun 13:23]
 :END:
-** TODO Implement some kind of basic UI for entering text prompts (file saving) and selecting items
-** TODO The ability to create new screens
-** TODO The ability to create and edit portals between screens
-*** TODO Enable the UI to select portals either by clicking or key binding
-** TODO The ability to change map tiles to draw
-** TODO Fix the behavior of navigating between screens
+** DONE The ability to create new screens
+CLOSED: [2022-11-19 Sat 16:05]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-19 Sat 16:05]
+:END:
+** DONE Fix the behavior of navigating between screens
+CLOSED: [2022-11-19 Sat 16:05]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-19 Sat 16:05]
+:END:
+** DONE The ability to change map tiles to draw
+CLOSED: [2022-11-20 Sun 16:56]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-20 Sun 16:56]
+:END:
+** TODO Fix upward collision detection
+** TODO Fix font rendering when we draw map tiles
+** TODO Rendering and picking up stones on the appropriate screens
+** TODO Dropping off stones back at the main screen
 * Off-Stream Tasks
 
 ** TODO Reading and writing Mesche data from files
-** TODO Improve collision detection, especially upper movement checking while jumping
-
 ** TODO Better error handling
 
 ** TODO Mesche no longer reports when local variables don't exist.  Why does =t= and others work half the time when they don't exist?
 
 ** TODO =equal?= does not complain when not given second param, does weird stuff
 ** TODO Chunk file name string is being freed before an error can be printed
+** TODO Investigate issues with nested ifs:
 
-* How UI Should Work
+#+begin_src scheme
 
-- The UI library will basically create a tree of UI elements
-- The root element covers the whole screen but doesn't render anything
-- Any real UI elements are children of that root element
-- Any UI element can have its own children
-- Game inputs events are sent to the root element
-- If the root element can't handle a particular event, it sends the event to each of its children until one of them can handle it
+  (if (equal? state 'editing)
+      (if (input-event-key-down? input-event)
+          (if (and (input-event-modifier-ctrl? input-event)
+                   (equal? (input-event-key-code input-event)
+                           input-key-code-s))
+              (save-screen current-screen
+                           (string-append "assets/screens/"
+                                          (screen-name current-screen)
+                                          ".stm"))
+              (check-tile-select-input input-event)))
 
-What we need:
+      ;; If not editing, handle player input
+      (handle-player-input player input-event))
 
-- Text prompts entering or editing the name of screens or portals
-- Possibly buttons that have actions
-- Maybe some kind of selector element for displaying tiles to select, but at the very least something that can display the currently selected tile image/color
+#+end_src
+* Backlog
+** TODO The ability to create and edit portals between screens
+*** TODO Enable the UI to select portals either by clicking or key binding
+** TODO Find a way to make portals bigger than just one tile so you can't jump over them
+
+- Define a portal by name and associate tile locations with it, so it can have an arbitrary position and size
+- However, we need to figure out how transition points map between screens
+- Maybe make x or y axis optional so that it triggers on the whole other axis
+
+** TODO Implement some kind of basic UI for entering text prompts (file saving) and selecting items
