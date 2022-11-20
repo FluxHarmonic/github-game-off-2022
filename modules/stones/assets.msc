@@ -1,11 +1,13 @@
 (define-module (stones assets)
-  (import (substratic font)))
+  (import (substratic font)
+          (substratic texture)))
 
 ;; (font-load-file "assets/fonts/Thintel.ttf" 75)
 ;; (font-load-file "assets/fonts/Thintel.ttf" 250)
 ;; (font-load-file "assets/fonts/Thintel.ttf" 125)
 
 (define fonts '())
+(define textures '())
 
 (define (load-font name path size) :export
   (let ((existing (assq name fonts)))
@@ -16,3 +18,13 @@
           (set! fonts (cons (cons name font)
                             fonts))
           font))))
+
+(define (load-texture name path) :export
+  (let ((existing (assq name textures)))
+    (if existing
+        (cdr existing)
+        (let ((texture (texture-load path)))
+          ;; Add the new texture to the list
+          (set! textures (cons (cons name texture)
+                               textures))
+          texture))))

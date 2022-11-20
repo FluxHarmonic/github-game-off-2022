@@ -3,12 +3,16 @@
           (mesche math)
           (mesche array)
           (mesche string)
+          (stones assets)
+          (substratic texture)
           (substratic renderer)))
 
 (define portal-direction-left  0 :export)
 (define portal-direction-right 1 :export)
 (define portal-direction-up    2 :export)
 (define portal-direction-down  3 :export)
+
+(define tile-texture #f)
 
 (define-record-type portal
   (fields name
@@ -61,11 +65,14 @@
                  (+ x (* y map-width)))
       #f))
 
-(define (screen-portal-at-pos screen x y) :export
+(define (screen-portal-at-pos screen x y direction) :export
   (let loop ((portals (screen-portals screen)))
     (if (pair? portals)
         (if (and (equal? (portal-x (car portals)) x)
-                 (equal? (portal-y (car portals)) y))
+                 (equal? (portal-y (car portals)) y)
+                 (or (not direction)
+                     (equal? direction
+                             (portal-direction (car portals)))))
             (car portals)
             (loop (cdr portals)))
         #f)))
@@ -107,15 +114,15 @@
 (define (create-start-screen) :export
   (let ((screen (create-screen "start")))
     (fill-screen screen 18)
-    (screen-tile-set! screen 12 17 1)
-    (screen-tile-set! screen 13 17 1)
-    (screen-tile-set! screen 14 17 1)
-    (screen-tile-set! screen 15 17 1)
-    (screen-tile-set! screen 16 17 1)
-    (screen-tile-set! screen 13 16 1)
-    (screen-tile-set! screen 14 16 1)
-    (screen-tile-set! screen 15 16 1)
-    (screen-tile-set! screen 14 15 1)
+    ;; (screen-tile-set! screen 12 17 1)
+    ;; (screen-tile-set! screen 13 17 1)
+    ;; (screen-tile-set! screen 14 17 1)
+    ;; (screen-tile-set! screen 15 17 1)
+    ;; (screen-tile-set! screen 16 17 1)
+    ;; (screen-tile-set! screen 13 16 1)
+    ;; (screen-tile-set! screen 14 16 1)
+    ;; (screen-tile-set! screen 15 16 1)
+    ;; (screen-tile-set! screen 14 15 1)
     (screen-portal-add! screen
                         "left-portal"
                         0 17
@@ -137,12 +144,19 @@
                         "right-portal"
                         39 11
                         portal-direction-right
-                        "start" "left-portal")
+                        "start"
+                        "left-portal")
     screen))
 
 (define (create-right-screen) :export
   (let ((screen (create-screen "right")))
     (fill-screen screen 20)
+    (screen-portal-add! screen
+                        "left-portal"
+                        0 19
+                        portal-direction-left
+                        "start"
+                        "right-portal")
     screen))
 
 (define (create-down-screen) :export
@@ -233,22 +247,31 @@
   (display "Reading screen file: ")
   (display file-path)
   (display "\n")
+
+  ;; Ensure that the tile texture is loaded
+  (if (not tile-texture)
+      (set! tile-texture (texture-load "assets/tiles/tiles.png") ;; (load-texture 'tiles "assets/tiles/tiles.png")
+            ))
+
+  ;; Load the screen file
   (let ((port (open-input-file file-path))
         (screen #f))
-    (if (not (equal? (read-line port)
-                     "stcm"))
-        (display "This is NOT a map file!\n")
-        (begin
-          (display "This is a map file!\n")
-          (set! screen
-                (make-screen :name (read-line port)
-                             :width (string->number (read-line port))
-                             :height (string->number (read-line port))
-                             :bg-color (read-color port)
-                             :tiles (read-tiles port)
-                             :portals (read-portals port)))))
+    (if (equal? (read-line port)
+                "stcm")
+        (set! screen
+              (make-screen :name (read-line port)
+                           :width (string->number (read-line port))
+                           :height (string->number (read-line port))
+                           :bg-color (read-color port)
+                           :tiles (read-tiles port)
+                           :portals (read-portals port)))
+        (set! screen #f))
     (close-input-port port)
     screen))
+
+(define (tile-index->texture-coords index)
+  (cons (* (% index 10) tile-size)
+        (* (floor (/ index 10)) tile-size)))
 
 (define (render-screen renderer screen window-width window-height) :export
   ;; Render the background color
@@ -264,12 +287,23 @@
     (if (< pos max)
         (let ((x (% pos map-width))
               (y (floor (/ pos map-width))))
-         (if (equal? (screen-tile-ref screen x y) 1)
-              (renderer-draw-rect renderer
-                                  (* x tile-size)
-                                  (* y tile-size)
-                                  tile-size
-                                  tile-size
-                                  ground-color))
+          (let ((index (screen-tile-ref screen x y))
+                (texture-coords #f))
+            (set! texture-coords (tile-index->texture-coords (- index 1)))
+            (if (> index 0)
+                ;; (renderer-draw-texture-region renderer
+                ;;                               tile-texture
+                ;;                               (* x tile-size)
+                ;;                               (* y tile-size)
+                ;;                               tile-size
+                ;;                               tile-size
+                ;;                               (car texture-coords)
+                ;;                               (cdr texture-coords))
+                (renderer-draw-rect renderer
+                                    (* x tile-size)
+                                    (* y tile-size)
+                                    tile-size
+                                    tile-size
+                                    ground-color)))
           (loop (+ pos 1)
                 max)))))

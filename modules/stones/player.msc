@@ -62,6 +62,57 @@
               (player-vel-y-set! player player-jump-vel-y)
               (player-state-set! player 'jumping))))))
 
+(define (check-moving-collision screen player left-x right-x vel-x)
+  (let ((top-y (floor (/ (player-y player) tile-size)))
+        (bottom-y (floor (/ (+ (player-y player)
+                               (- player-size 1))
+                            tile-size))))
+
+    ;; Check for collision against a wall tile
+    (if (or (and (< vel-x 0)
+                 (screen-tile-wall? screen left-x bottom-y))
+            (and (> vel-x 0)
+                 (screen-tile-wall? screen right-x bottom-y)))
+        ;; Stop horizontal movement
+        (begin
+          (player-x-set! player (* (if (< vel-x 0)
+                                       (+ left-x 1)
+                                       (- right-x 1))
+                                   tile-size))
+          (player-accel-x-set! player 0)
+          (player-vel-x-set! player 0)))))
+
+;; Looking at tile position only
+;; movement on X, top tile bottom tile, they could be same if the player fits within the tile
+;; movement on Y, left tile right tile, they could same
+
+(define (check-falling-collision screen player left-x right-x top-y bottom-y)
+  ;; When not jumping, check for collision with ground
+  ;; so that the jumping/falling state can be enabled.
+  ;; If jumping, check for collision with ground to see
+  ;; if we should stop falling
+
+  (let ((left-x (floor (/ (+ (player-x player) 3)
+                          tile-size)))
+        (right-x (floor (/ (+ (player-x player)
+                              (- player-size 3))
+                           tile-size))))
+    ;; Check for collision against a ground tile
+    (if (or (screen-tile-ground? screen left-x bottom-y)
+            (and (not (equal? left-x right-x))
+                 (screen-tile-ground? screen right-x bottom-y)))
+        (if (equal? (player-state player) 'jumping)
+            (begin
+              ;; Stop the player from moving
+              (display "LANDED!\n")
+              (display (cons right-x bottom-y))
+              (display "\n")
+              (player-y-set! player (* top-y tile-size))
+              (player-vel-y-set! player 0)
+              (player-state-set! player 'standing)))
+        (begin
+          (player-state-set! player 'jumping)))))
+
 (define (update-player player screen game-event-handler time-delta) :export
   ;; Read the player input and decide how to handle it
   (read-controller player player-controller time-delta)
@@ -83,38 +134,64 @@
         (player-y-set! player (+ (player-y player)
                                  (player-vel-y player)))))
 
-  (let ((map-x (floor (/ (player-x player) tile-size)))
-        (map-y (floor (/ (player-y player) tile-size)))
-        (vel-x (player-vel-x player)))
+  ;; When checking for falling, it makes sense to have the bottom-y be at the
+  ;; full extent of the player so that we always find the floor under their feet
+
+  (let ((left-x (floor (/ (player-x player)
+                          tile-size)))
+        (right-x (floor (/ (+ (player-x player)
+                              (- player-size 1))
+                           tile-size)))
+        (top-y (floor (/ (player-y player)
+                         tile-size)))
+        (bottom-y (floor (/ (+ (player-y player)
+                               player-size)
+                            tile-size)))
+        (vel-x (player-vel-x player))
+        (vel-y (player-vel-y player)))
+
+    (check-falling-collision screen player left-x right-x top-y bottom-y)
+    (check-moving-collision screen player left-x right-x vel-x)
+
     ;; Check for collision against a portal
-    (let ((portal (or (and (< vel-x 0)
-                           (screen-portal-at-pos screen map-x map-y))
-                      (and (> vel-x 0)
-                           (screen-portal-at-pos screen (+ map-x 1) map-y)))))
-      (if portal (game-event-handler (cons 'change-screen portal))))
+    ;; (let ((portal (or (and (< vel-x 0)
+    ;;                        (screen-portal-at-pos screen
+    ;;                                              (- map-x 1)
+    ;;                                              map-y
+    ;;                                              portal-direction-left))
+    ;;                   (and (> vel-x 0)
+    ;;                        (screen-portal-at-pos screen
+    ;;                                              map-x
+    ;;                                              map-y
+    ;;                                              portal-direction-right)))))
+    ;;   (if portal (game-event-handler (cons 'change-screen portal))))
+    (let ((portal (find-activated-portal screen
+                                         left-x right-x
+                                         top-y bottom-y
+                                         vel-x vel-y)))
+      (if portal (game-event-handler (cons 'change-screen portal))))))
 
-    ;; Check for collision against a wall tile
-    (if (or (and (< vel-x 0)
-                 (screen-tile-wall? screen map-x map-y))
-            (and (> vel-x 0)
-                 (screen-tile-wall? screen (+ map-x 1) map-y)))
-        ;; Stop movement
-        (begin
-          (player-x-set! player (* (+ map-x (if (< vel-x 0) 1 0))
-                                   tile-size))
-          (player-accel-x-set! player 0)
-          (player-vel-x-set! player 0)))
-
-    ;; Check for collision against a ground tile
-    (if (or (screen-tile-ground? screen map-x (+ map-y 1))
-            (screen-tile-ground? screen (+ map-x 1) (+ map-y 1)))
-        (begin
-          ;; Stop the player from moving
-          (player-y-set! player (* map-y tile-size))
-          (player-vel-y-set! player 0)
-          (player-state-set! player 'standing))
-        (begin
-          (player-state-set! player 'jumping)))))
+(define (find-activated-portal screen left-x right-x top-y bottom-y vel-x vel-y)
+  ;; Check for top and bottom when vel-x != 0
+  ;; Check for left and right when vel-y != 0
+  (or (and (< vel-x 0)
+           (or (screen-portal-at-pos screen
+                                     left-x
+                                     top-y
+                                     portal-direction-left)
+               (screen-portal-at-pos screen
+                                     left-x
+                                     bottom-y
+                                     portal-direction-left)))
+      (and (> vel-x 0)
+           (or (screen-portal-at-pos screen
+                                  right-x
+                                  top-y
+                                  portal-direction-right)
+               (screen-portal-at-pos screen
+                                  right-x
+                                  bottom-y
+                                  portal-direction-right)))))
 
 (define (render-player renderer player window-width window-height) :export
   (renderer-draw-rect renderer

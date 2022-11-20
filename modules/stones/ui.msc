@@ -23,6 +23,9 @@
           max-x
           max-y))
 
+(define-record-type ui-mouse-event
+  (fields x y kind button))
+
 (define ui-font #f)
 
 (define null-renderer (lambda (ui-context ui-element renderer) #f) :export)
@@ -49,16 +52,24 @@
                 (cdr children))))))
 
 (define (translate-mouse-event event ui-element)
-  (break)
   (if (ui-mouse-event? event)
-      event
-      ;; (make-ui-mouse-event :x (- (ui-mouse-event-x event)
-      ;;                            (ui-element-pos-x ui-element))
-      ;;                      :y (- (ui-mouse-event-y event)
-      ;;                            (ui-element-pos-y ui-element))
-      ;;                      :kind (ui-mouse-event-kind event)
-      ;;                      :button (ui-mouse-event-button event))
+      ;; event
+      (begin
+        (display "Making translated event!\n")
+        (make-ui-mouse-event :x (- (ui-mouse-event-x event)
+                                          (ui-element-pos-x ui-element))
+                                    :y (- (ui-mouse-event-y event)
+                                          (ui-element-pos-y ui-element))
+                                    :kind (ui-mouse-event-kind event)
+                                    :button (ui-mouse-event-button event)))
       event))
+
+(define (debug label value)
+  (display label)
+  (display ": ")
+  (display value)
+  (display "\n")
+  value)
 
 (define (handle-children ui-context ui-element event)
   (let loop ((children (or (ui-element-children ui-element) '())))
@@ -66,7 +77,8 @@
     (if (pair? children)
         (or (handle-element ui-context
                             (car children)
-                            (translate-mouse-event event (car children))
+                            (debug "TRANSLATED EVENT: "
+                                   (translate-mouse-event event (car children)))
                             ;; event
                             )
             (loop (cdr children))))))
@@ -78,6 +90,7 @@
   ((ui-element-updater ui-element) ui-context ui-element time-delta))
 
 (define (handle-element ui-context ui-element event) :export
+  (debug "HANDLE-ELEMENT" ui-element)
   ((ui-element-handler ui-element) ui-context ui-element event))
 
 (define (add-child-element! ui-element child-element)
@@ -115,9 +128,6 @@
                  (+ (+ y 4)
                     (font-height ui-font)))))
 
-(define-record-type ui-mouse-event
-  (fields x y kind button))
-
 ;; (define (project-mouse-event))
 
 (define (handle-button ui-context ui-element event)
@@ -144,7 +154,7 @@
                    :updater null-updater
                    :handler handle-button))
 
-(define (handle-root-event ui-context ui-element event)
+(define (handle-root-event ui-context ui-element event) :export
   ;; Is it a mouse move event?  If so, store the mouse position
   (if (ui-mouse-event? event)
       (let ((x (ui-mouse-event-x event))

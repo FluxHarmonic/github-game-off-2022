@@ -27,8 +27,15 @@
 (define last-save-point #f)
 (define root-element #f)
 (define ui-context #f)
+(define current-tile-index 1)
 
 (define screen-scale 1)
+
+(define stone-locations
+  '(("peace-5-1" (3 3))
+    ("cave-1-1" (3 3))
+    ("tech-2-3" (3 3))
+    ("lava-3-1" (3 3))))
 
 (define (screen-by-name screens name)
   (cdr (assq name screens)))
@@ -47,21 +54,11 @@
                                "assets/fonts/Thintel.ttf"
                                150))
 
-  (let ((start #f))
-    (save-screen (create-start-screen) "assets/screens/start.stm")
-    (set! start (load-screen "assets/screens/start.stm"))
-
-    ;; TODO: Load the screen index
-    (set! screens (list (cons "start" start)
-                        (cons "left" (create-left-screen))
-                        (cons "right" (create-right-screen))
-                        (cons "down" (create-down-screen)))))
-
   ;; TODO: Load the last save point data
   (set! last-save-point (cons "start" (cons 19 17)))
 
-  ;; Set the start screen
-  (set! current-screen (screen-by-name screens (car last-save-point)))
+  ;; Load the starting point of the game
+  (set! current-screen (load-screen "assets/screens/peace-3-1.stm"))
 
   ;; Create the UI
   (set! root-element (create-root-element
@@ -97,23 +94,56 @@
                                    :y mouse-y
                                    :kind 'move)))))
 
+(define (apply-input-handlers input-event handlers)
+  (if (pair? handlers)
+      (if (not ((car handlers) input-event))
+          (apply-input-handlers input-event
+                                (cdr handlers)))))
+
+(define (editor-key-handler input-event)
+  (if (and (equal? state 'editing)
+           (input-event-key-down? input-event)
+           ;; (input-event-modifier-ctrl? input-event)
+           (equal? (input-event-key-code input-event)
+                   input-key-code-s))
+      (begin
+        (save-screen current-screen
+                     (string-append "assets/screens/"
+                                    (screen-name current-screen)
+                                    ".stm"))
+        #t)))
+
+(define (editor-tile-select-handler input-event)
+  (let ((key (input-event-key-code input-event)))
+    (if (and (>= key input-key-code-0)
+             (<= key input-key-code-9))
+        (begin
+          (set! current-tile-index (- key input-key-code-0))
+          #t))))
+
+(define (editor-mouse-handler input-event)
+  ;; Did the player click the mouse in edit mode?
+  (if (and (input-event-mouse-button-down? input-event)
+           (equal? (input-event-mouse-button input-event)
+                   input-mouse-button-left))
+      (let ((map-pos (screen->world mouse-x mouse-y)))
+        (screen-tile-set! current-screen
+                          (car map-pos)
+                          (cdr map-pos)
+                          current-tile-index)
+        #t)))
+
+(define editor-input-handlers
+  (list editor-key-handler
+        editor-tile-select-handler
+        editor-mouse-handler))
+
 (define (handle-game-input-event input-event) :export
   ;; Track current mouse position
   (if (input-event-mouse-move? input-event)
       (begin
         (set! mouse-x (/ (input-event-mouse-x input-event) screen-scale))
         (set! mouse-y (/ (input-event-mouse-y input-event) screen-scale))))
-
-  ;; Did the player click the mouse in edit mode?
-  ;; (if (and (equal? state 'editing)
-  ;;          (input-event-mouse-button-down? input-event)
-  ;;          (equal? (input-event-mouse-button input-event)
-  ;;                  input-mouse-button-left))
-  ;;     (let ((map-pos (screen->world mouse-x mouse-y)))
-  ;;       (screen-tile-set! current-screen
-  ;;                         (car map-pos)
-  ;;                         (cdr map-pos)
-  ;;                         1)))
 
   ;; Are we toggling edit mode?
   (if (and (input-event-key-down? input-event)
@@ -127,36 +157,35 @@
                                 (symbol->string state)
                                 "'\n"))))
 
-  (if (equal? state 'editing)
-      (if (and (input-event-key-down? input-event)
-               (input-event-modifier-ctrl? input-event)
-               (equal? (input-event-key-code input-event)
-                       input-key-code-s))
-          (begin
-            ;; (display "About to save...\n")
-            (save-screen current-screen (string-append "assets/screens/"
-                                                       (screen-name current-screen)
-                                                       ".stm"))
-            (display "Saved the screen!\n"))
-
-          ;; Translate the input event to screen space
-          (handle-element ui-context
-                          root-element
-                          (translate-input-event input-event mouse-x mouse-y)))
-
-      ;; If not editing, handle player input
-      (handle-player-input player input-event)))
+  ;; If not editing, handle player input
+  (if (equal? state 'running)
+      (handle-player-input player input-event)
+      (apply-input-handlers input-event
+                            editor-input-handlers)))
 
 (define (game-event-handler event)
   (if (equal? (car event) 'change-screen)
-      (let ((portal (cdr event)))
-        (set! current-screen (screen-by-name screens (portal-dest-screen portal)))
-        ;; TODO: Set player position to portal
-        (display "MOVING TO SCREEN: ")
-        (display (portal-dest-screen portal))
-        (display "\n")
-        ;; (screen-portal-by-name current-screen (portal-dest-portal portal))
-        )))
+      (let ((portal (cdr event))
+            (screen #f))
+        ;; Load the next screen
+        (set! screen (load-screen (string-append "assets/screens/"
+                                                 (portal-dest-screen portal)
+                                                 ".stm")))
+
+        ;; Find the destination portal by name
+        (let ((dest-portal (memp (lambda (p)
+                                   (equal? (portal-name p)
+                                           (portal-dest-portal portal)))
+                                 (screen-portals screen))))
+          (if dest-portal
+              (begin
+                (set! current-screen screen)
+                (player-x-set! player (* (portal-x (car dest-portal)) tile-size))
+                (player-y-set! player (* (portal-y (car dest-portal)) tile-size)))
+              (begin
+                (display "Did not find portal: ")
+                (display (portal-dest-portal portal))
+                (display "\n")))))))
 
 (define (update-game time-delta) :export
   (if (eqv? state 'quit)
@@ -193,8 +222,19 @@
 
   (render-text renderer
                small-font
-               (string-append "STATE: " (symbol->string state))
+               (string-append "State: " (symbol->string state))
                10 50)
 
+  (render-text renderer
+               small-font
+               (string-append "Screen: " (screen-name current-screen))
+               10 70)
+
+  (render-text renderer
+               small-font
+               (string-append "Tile: " (number->string current-tile-index))
+               10 90)
+
   ;; Render the UI
-  (render-element ui-context root-element renderer))
+  ;; (render-element ui-context root-element renderer)
+  )
