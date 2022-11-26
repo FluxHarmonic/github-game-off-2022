@@ -1,8 +1,10 @@
 (define-module (stones main)
-  (import (mesche array)
+  (import (mesche io)
+          (mesche array)
           (mesche math)
           (mesche list)
           (mesche time)
+          (mesche repl)
           (mesche string)
           (substratic font)
           (substratic input)
@@ -23,6 +25,8 @@
                               "Call of the Stones"))
 (define input-state (input-init window))
 (define renderer (renderer-create window))
+
+(define poll-repl (start-repl-async (current-input-port)))
 
 ;; Scale everything rendered by the scale factor
 (renderer-scale-set! renderer screen-scale)
@@ -57,6 +61,11 @@
 (define (main-updater time-delta)
   (if (not (window-needs-close? window))
       (begin
+        ;; Check the REPL for input
+        (if poll-repl
+            (poll-repl #t))
+
+        ;; Update the game
         (handle-input-events)
         (current-updater time-delta))))
 
