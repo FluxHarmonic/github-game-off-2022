@@ -104,14 +104,18 @@
         (if (equal? (player-state player) 'jumping)
             (begin
               ;; Stop the player from moving
-              (display "LANDED!\n")
-              (display (cons right-x bottom-y))
-              (display "\n")
               (player-y-set! player (* top-y tile-size))
               (player-vel-y-set! player 0)
               (player-state-set! player 'standing)))
         (begin
           (player-state-set! player 'jumping)))))
+
+(define (debug label value)
+  (display label)
+  (display ": ")
+  (display value)
+  (display "\n")
+  value)
 
 (define (update-player player screen game-event-handler time-delta) :export
   ;; Read the player input and decide how to handle it
@@ -154,17 +158,6 @@
     (check-moving-collision screen player left-x right-x vel-x)
 
     ;; Check for collision against a portal
-    ;; (let ((portal (or (and (< vel-x 0)
-    ;;                        (screen-portal-at-pos screen
-    ;;                                              (- map-x 1)
-    ;;                                              map-y
-    ;;                                              portal-direction-left))
-    ;;                   (and (> vel-x 0)
-    ;;                        (screen-portal-at-pos screen
-    ;;                                              map-x
-    ;;                                              map-y
-    ;;                                              portal-direction-right)))))
-    ;;   (if portal (game-event-handler (cons 'change-screen portal))))
     (let ((portal (find-activated-portal screen
                                          left-x right-x
                                          top-y bottom-y
@@ -172,26 +165,45 @@
       (if portal (game-event-handler (cons 'change-screen portal))))))
 
 (define (find-activated-portal screen left-x right-x top-y bottom-y vel-x vel-y)
-  ;; Check for top and bottom when vel-x != 0
-  ;; Check for left and right when vel-y != 0
-  (or (and (< vel-x 0)
-           (or (screen-portal-at-pos screen
-                                     left-x
-                                     top-y
-                                     portal-direction-left)
-               (screen-portal-at-pos screen
-                                     left-x
-                                     bottom-y
-                                     portal-direction-left)))
-      (and (> vel-x 0)
-           (or (screen-portal-at-pos screen
-                                  right-x
-                                  top-y
-                                  portal-direction-right)
-               (screen-portal-at-pos screen
-                                  right-x
-                                  bottom-y
-                                  portal-direction-right)))))
+  ;; TODO: We do this weird if check because the Y axis checks were not working
+  ;; reliably before!
+  (if (not (equal? vel-y 0))
+      (or (and (< vel-y 0)
+               (or (screen-portal-at-pos screen
+                                         left-x
+                                         top-y
+                                         portal-direction-up)
+                   (screen-portal-at-pos screen
+                                         right-x
+                                         top-y
+                                         portal-direction-up)))
+          (and (> vel-y 0)
+               (or (screen-portal-at-pos screen
+                                         left-x
+                                         bottom-y
+                                         portal-direction-down)
+                   (screen-portal-at-pos screen
+                                         right-x
+                                         bottom-y
+                                         portal-direction-down))))
+      (or (and (< vel-x 0)
+               (or (screen-portal-at-pos screen
+                                         left-x
+                                         top-y
+                                         portal-direction-left)
+                   (screen-portal-at-pos screen
+                                         left-x
+                                         bottom-y
+                                         portal-direction-left)))
+          (and (> vel-x 0)
+               (or (screen-portal-at-pos screen
+                                         right-x
+                                         top-y
+                                         portal-direction-right)
+                   (screen-portal-at-pos screen
+                                         right-x
+                                         bottom-y
+                                         portal-direction-right))))))
 
 (define (render-player renderer player window-width window-height) :export
   (renderer-draw-rect renderer
