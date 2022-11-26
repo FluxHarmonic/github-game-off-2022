@@ -101,69 +101,6 @@
                :tiles (make-array (* map-width map-height))
                :portals '()))
 
-(define (screen-portal-add! screen name x y direction dest-screen dest-portal) :export
-  (screen-portals-set! screen
-                       (cons (make-portal :name name
-                                          :x x
-                                          :y y
-                                          :direction direction
-                                          :dest-screen dest-screen
-                                          :dest-portal dest-portal)
-                             (screen-portals screen))))
-
-(define (create-start-screen) :export
-  (let ((screen (create-screen "start")))
-    (fill-screen screen 18)
-    ;; (screen-tile-set! screen 12 17 1)
-    ;; (screen-tile-set! screen 13 17 1)
-    ;; (screen-tile-set! screen 14 17 1)
-    ;; (screen-tile-set! screen 15 17 1)
-    ;; (screen-tile-set! screen 16 17 1)
-    ;; (screen-tile-set! screen 13 16 1)
-    ;; (screen-tile-set! screen 14 16 1)
-    ;; (screen-tile-set! screen 15 16 1)
-    ;; (screen-tile-set! screen 14 15 1)
-    (screen-portal-add! screen
-                        "left-portal"
-                        0 17
-                        portal-direction-left
-                        "left"
-                        "right-portal")
-    (screen-portal-add! screen
-                        "right-portal"
-                        39 17
-                        portal-direction-right
-                        "right"
-                        "left-portal")
-    screen))
-
-(define (create-left-screen) :export
-  (let ((screen (create-screen "left")))
-    (fill-screen screen 12)
-    (screen-portal-add! screen
-                        "right-portal"
-                        39 11
-                        portal-direction-right
-                        "start"
-                        "left-portal")
-    screen))
-
-(define (create-right-screen) :export
-  (let ((screen (create-screen "right")))
-    (fill-screen screen 20)
-    (screen-portal-add! screen
-                        "left-portal"
-                        0 19
-                        portal-direction-left
-                        "start"
-                        "right-portal")
-    screen))
-
-(define (create-down-screen) :export
-  (let ((screen (create-screen "down")))
-    (fill-screen screen 10)
-    screen))
-
 (define (write-portals portals port)
   (let loop ((count 0)
              (portals portals)
