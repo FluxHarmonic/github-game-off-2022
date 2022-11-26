@@ -103,18 +103,30 @@
           (apply-input-handlers input-event
                                 (cdr handlers)))))
 
+(define (set-current-screen! screen-name)
+  (let ((screen-path (string-append "assets/screens/"
+                                    screen-name
+                                    ".stm")))
+    (set! current-screen (load-screen screen-path))))
+
+(define (reload-current-screen)
+  (set-current-screen! (screen-name current-screen)))
+
 (define (editor-key-handler input-event)
   (if (and (equal? state 'editing)
            (input-event-key-down? input-event)
-           ;; (input-event-modifier-ctrl? input-event)
-           (equal? (input-event-key-code input-event)
-                   input-key-code-s))
-      (begin
-        (save-screen current-screen
-                     (string-append "assets/screens/"
-                                    (screen-name current-screen)
-                                    ".stm"))
-        #t)))
+           (input-event-modifier-ctrl? input-event))
+      (if (equal? (input-event-key-code input-event)
+                  input-key-code-s)
+          (begin
+            (save-screen current-screen
+                         (string-append "assets/screens/"
+                                        (screen-name current-screen)
+                                        ".stm"))
+            #t)
+          (if (equal? (input-event-key-code input-event)
+                      input-key-code-r)
+              (reload-current-screen)))))
 
 (define (editor-tile-select-handler input-event)
   (let ((key (input-event-key-code input-event)))
