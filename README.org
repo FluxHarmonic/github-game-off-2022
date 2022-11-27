@@ -220,10 +220,28 @@ CLOSED: [2022-11-20 Sun 16:56]
 :LOGBOOK:
 - State "DONE"       from "TODO"       [2022-11-20 Sun 16:56]
 :END:
+** DONE Add a visual indicator for the K button to direct the player to nearest stone
+CLOSED: [2022-11-27 Sun 17:09]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-27 Sun 17:09]
+:END:
+** DONE Track overall world position for each screen
+CLOSED: [2022-11-27 Sun 17:09]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-27 Sun 17:09]
+:END:
+** DONE Dropping off stones back at the main screen
+CLOSED: [2022-11-27 Sun 17:09]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-27 Sun 17:09]
+:END:
+** DONE Rendering and picking up stones on the appropriate screens
+CLOSED: [2022-11-27 Sun 17:09]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2022-11-27 Sun 17:09]
+:END:
 ** TODO Fix upward collision detection
 ** TODO Fix font rendering when we draw map tiles
-** TODO Rendering and picking up stones on the appropriate screens
-** TODO Dropping off stones back at the main screen
 * Off-Stream Tasks
 
 ** TODO Reading and writing Mesche data from files
@@ -262,3 +280,4 @@ CLOSED: [2022-11-20 Sun 16:56]
 - Maybe make x or y axis optional so that it triggers on the whole other axis
 
 ** TODO Implement some kind of basic UI for entering text prompts (file saving) and selecting items
+** TODO =string-split= should pass a character to the predicate instead of a substring?
