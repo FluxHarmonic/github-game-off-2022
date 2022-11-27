@@ -19,7 +19,7 @@
 (define player-move-accel-x 7)
 (define player-max-vel-x 25)
 (define player-max-vel-y 7)
-(define player-controller (create-controller))
+(define player-controller #f)
 
 (define-record-type player
   (fields x
@@ -30,7 +30,8 @@
           accel-y
           state))
 
-(define (create-player) :export
+(define (create-player controller) :export
+  (set! player-controller controller)
   (make-player :x 100
                :y 500
                :vel-x 0
@@ -45,18 +46,12 @@
 (define (read-controller player controller time-delta)
   ;; Look at controller state to change velocity
   (let ((neg-move (* -1 player-move-accel-x)))
-    ;; (if (controller-up controller)
-    ;;     (player-vel-y-set! player neg-move)
-    ;;     (if (controller-down controller)
-    ;;         (player-vel-y-set! player player-move-speed)
-    ;;         (player-vel-y-set! player 0)))
     (if (controller-left controller)
         (player-accel-x-set! player neg-move)
         (if (controller-right controller)
             (player-accel-x-set! player player-move-accel-x)
             (player-accel-x-set! player 0)))
     (if (controller-jump controller)
-        ;; TODO: Add jump impulse
         (if (not (equal? (player-state player) 'jumping))
             (begin
               (player-vel-y-set! player player-jump-vel-y)
@@ -117,7 +112,7 @@
   (display "\n")
   value)
 
-(define (update-player player screen game-event-handler time-delta) :export
+(define (update-player player screen action-location game-event-handler time-delta) :export
   ;; Read the player input and decide how to handle it
   (read-controller player player-controller time-delta)
 
@@ -156,6 +151,14 @@
 
     (check-falling-collision screen player left-x right-x top-y bottom-y)
     (check-moving-collision screen player left-x right-x vel-x)
+
+    ;; Check for collision against the action position
+    (if (and action-location
+             (check-action-collision (cdr action-location)
+                                     left-x right-x
+                                     top-y bottom-y
+                                     vel-x vel-y))
+        (game-event-handler (cons (car action-location) #t)))
 
     ;; Check for collision against a portal
     (let ((portal (find-activated-portal screen
@@ -204,6 +207,26 @@
                                          right-x
                                          bottom-y
                                          portal-direction-right))))))
+(define (check-action-pos action-pos x y)
+  (and (equal? (car action-pos) x)
+       (equal? (cdr action-pos) y)))
+
+(define (check-action-collision action-pos left-x right-x top-y bottom-y vel-x vel-y)
+  ;; TODO: We do this weird if check because the Y axis checks were not working
+  ;; reliably before!
+  (if (not (equal? vel-y 0))
+      (or (and (< vel-y 0)
+               (or (check-action-pos action-pos left-x top-y)
+                   (check-action-pos action-pos right-x top-y)))
+          (and (> vel-y 0)
+               (or (check-action-pos action-pos left-x bottom-y)
+                   (check-action-pos action-pos right-x bottom-y))))
+      (or (and (< vel-x 0)
+               (or (check-action-pos action-pos left-x top-y)
+                   (check-action-pos action-pos left-x bottom-y)))
+          (and (> vel-x 0)
+               (or (check-action-pos action-pos right-x top-y)
+                   (check-action-pos action-pos right-x bottom-y))))))
 
 (define (render-player renderer player window-width window-height) :export
   (renderer-draw-rect renderer

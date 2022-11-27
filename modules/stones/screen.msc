@@ -22,9 +22,12 @@
           dest-portal))
 
 (define-record-type screen
-  (fields name                          ; The name of the screen
-          width                         ; The width of the screen
-          height                        ; The height of the screen
+  (fields name                     ; The name of the screen
+          area                     ; The area the screen belongs to
+          world-x                  ; The X position in overall world space
+          world-y                  ; The Y position in overall world space
+          width                    ; The width of the screen
+          height                   ; The height of the screen
           bg-image                 ; A background image to displ
           bg-color                 ; A background color to display when no image
           tiles                    ; The vector containing tile data
@@ -55,6 +58,9 @@
 (define (screen-tile-set! screen x y tile-index) :export
   (let ((tiles (screen-tiles screen)))
     (array-nth-set! tiles (+ x (* y map-width)) tile-index)))
+
+(define (screen-name->path screen-name) :export
+  (string-append "assets/screens/" screen-name ".stm"))
 
 (define (screen-tile-ref screen x y) :export
   (if (and (>= x 0)
@@ -134,13 +140,14 @@
                     portals))
         (reverse portals))))
 
-(define (save-screen screen file-path) :export
-  (display "Writing screen file: ")
-  (display file-path)
-  (display "\n")
-  (let ((port (open-output-file file-path)))
+(define (save-screen screen) :export
+  (let ((file-path (screen-name->path (screen-name screen)))
+        (port #f))
+    (set! port (open-output-file file-path))
+    (display "Writing screen file: ")
+    (display file-path)
+    (display "\n")
     (write-string "stcm\n" port)
-    (write-string (string-append (screen-name screen) "\n") port)
     (write-string (string-append (number->string map-width) "\n") port)
     (write-string (string-append (number->string map-height) "\n") port)
     (write-string (string-append (number->string (color-r (screen-bg-color screen))) " "
@@ -180,31 +187,38 @@
                   array))
           array))))
 
-(define (load-screen file-path) :export
-  (display "Reading screen file: ")
-  (display file-path)
-  (display "\n")
+(define (load-screen screen-name) :export
+  (let ((file-path (screen-name->path screen-name))
+        (name-parts (string-split screen-name
+                                  (lambda (c)
+                                    (string=? c "-")))))
+    (display "Reading screen file: ")
+    (display file-path)
+    (display "\n")
 
-  ;; Ensure that the tile texture is loaded
-  (if (not tile-texture)
-      (set! tile-texture (texture-load "assets/tiles/tiles.png") ;; (load-texture 'tiles "assets/tiles/tiles.png")
-            ))
+    ;; Ensure that the tile texture is loaded
+    (if (not tile-texture)
+        (set! tile-texture
+              (texture-load "assets/tiles/tiles.png"))) ;; (load-texture 'tiles "assets/tiles/tiles.png")
 
-  ;; Load the screen file
-  (let ((port (open-input-file file-path))
-        (screen #f))
-    (if (equal? (read-line port)
-                "stcm")
-        (set! screen
-              (make-screen :name (read-line port)
-                           :width (string->number (read-line port))
-                           :height (string->number (read-line port))
-                           :bg-color (read-color port)
-                           :tiles (read-tiles port)
-                           :portals (read-portals port)))
-        (set! screen #f))
-    (close-input-port port)
-    screen))
+    ;; Load the screen file
+    (let ((port (open-input-file file-path))
+          (screen #f))
+      (if (equal? (read-line port)
+                  "stcm")
+          (set! screen
+                (make-screen :name screen-name
+                             :area (car name-parts)
+                             :world-x (string->number (cadr name-parts))
+                             :world-y (string->number (caddr name-parts))
+                             :width (string->number (read-line port))
+                             :height (string->number (read-line port))
+                             :bg-color (read-color port)
+                             :tiles (read-tiles port)
+                             :portals (read-portals port)))
+          (set! screen #f))
+      (close-input-port port)
+      screen)))
 
 (define (tile-index->texture-coords index)
   (cons (* (% index 10) tile-size)
