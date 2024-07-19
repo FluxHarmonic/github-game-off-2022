@@ -2,8 +2,6 @@
 
 The Jam Website: https://itch.io/jam/game-off-2022
 
-Hello Crafters! Foo
-
 * The Concept
 
 I would like to make a minimal, atmospheric 2D platformer directly inspired by the game [[https://archive.org/details/Knytt/][Knytt]].
